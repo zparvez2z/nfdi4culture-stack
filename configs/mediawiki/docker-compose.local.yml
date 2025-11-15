@@ -1,0 +1,86 @@
+# MediaWiki + Wikibase Docker Compose Configuration
+# Uses local repositories mounted as volumes for development
+#
+# IMPORTANT: This file requires environment variables from ../../.env
+# Run with: docker compose --env-file ../../.env -f docker-compose.local.yml up -d
+#
+# Or from project root:
+# docker compose --env-file .env -f configs/mediawiki/docker-compose.local.yml up -d
+
+services:
+  mediawiki:
+    image: docker-registry.wikimedia.org/dev/bookworm-php83-fpm:1.0.0
+    user: "${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}"
+    volumes:
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+    environment:
+      COMPOSER_CACHE_DIR: '/var/www/html/w/cache/composer'
+      MW_SERVER: 'http://localhost:${MW_DOCKER_PORT:-8181}'
+      MW_DOCKER_PORT: "${MW_DOCKER_PORT:-8181}"
+      MW_SCRIPT_PATH: '/w'
+      MW_DBTYPE: 'mysql'
+      MW_DBSERVER: 'db'
+      MW_DBNAME: '${MYSQL_DATABASE}'
+      MW_DBUSER: '${MYSQL_USER}'
+      MW_DBPASS: '${MYSQL_PASSWORD}'
+      MW_LANG: 'en'
+      MW_USER: '${MW_ADMIN_USER}'
+      MW_PASS: '${MW_ADMIN_PASS}'
+      MW_SITENAME: '${MW_SITENAME:-NFDI4Culture Wikibase}'
+      MW_LOG_DIR: /var/www/html/w/cache
+      XDEBUG_ENABLE: 'false'
+      XHPROF_ENABLE: 'false'
+    depends_on:
+      - db
+    networks:
+      - wikibase-net
+
+  mediawiki-web:
+    image: docker-registry.wikimedia.org/dev/bookworm-apache2:1.0.1
+    user: "${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}"
+    ports:
+      - "${MW_DOCKER_PORT:-8181}:8080"
+    volumes:
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+    environment:
+      MW_LOG_DIR: /var/www/html/w/cache
+      MW_DOCKER_PORT: "${MW_DOCKER_PORT:-8181}"
+    depends_on:
+      - mediawiki
+    networks:
+      - wikibase-net
+
+  mediawiki-jobrunner:
+    image: docker-registry.wikimedia.org/dev/bookworm-php83-jobrunner:1.0.0
+    user: "${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}"
+    volumes:
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
+      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+    environment:
+      MW_LOG_DIR: /var/www/html/w/cache
+      MW_INSTALL_PATH: /var/www/html/w
+    depends_on:
+      - mediawiki
+    networks:
+      - wikibase-net
+
+  db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
+      MYSQL_DATABASE: '${MYSQL_DATABASE}'
+      MYSQL_USER: '${MYSQL_USER}'
+      MYSQL_PASSWORD: '${MYSQL_PASSWORD}'
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - wikibase-net
+
+volumes:
+  db-data:
+
+networks:
+  wikibase-net:
+    driver: bridge
