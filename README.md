@@ -77,10 +77,12 @@ nano .env
 ### Access
 
 - **MediaWiki/Wikibase:** http://localhost:8181/w/index.php
+- **OpenRefine:** http://localhost:3333
 - **Admin Login:** Use credentials from `.env` (MW_ADMIN_USER / MW_ADMIN_PASS)
 
 ### Management Commands
 
+#### MediaWiki/Wikibase
 ```bash
 # Start services
 ./mediawiki.sh up -d
@@ -98,12 +100,28 @@ nano .env
 ./mediawiki.sh restart
 ```
 
+#### OpenRefine
+```bash
+# Start OpenRefine
+./openrefine.sh up -d
+
+# Stop OpenRefine
+./openrefine.sh down
+
+# View logs
+./openrefine.sh logs -f
+
+# Check status
+./openrefine.sh ps
+```
+
 ## 📖 Documentation
 
-- [Architecture Details](./ARCHITECTURE.md)
-- [Deployment Guide](./DEPLOYMENT.md)
-- [Integration Guide](./INTEGRATION.md)
-- [Troubleshooting](./docs/)
+- [Day 1: MediaWiki + Wikibase Setup](./docs/01-mediawiki-wikibase-setup.md)
+- [Day 2: OpenRefine Integration](./docs/02-openrefine-setup.md)
+- [Architecture Details](./ARCHITECTURE.md) (coming soon)
+- [Deployment Guide](./DEPLOYMENT.md) (coming soon)
+- [Integration Guide](./INTEGRATION.md) (coming soon)
 
 ## 🎬 Demo
 
