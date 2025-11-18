@@ -3,6 +3,7 @@
 
 # Docker volumes and data
 data/
+!data/*.csv
 volumes/
 
 # Logs
