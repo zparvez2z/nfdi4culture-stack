@@ -1,0 +1,38 @@
+{
+  "version": "2.0",
+  "name": "NFDI4Culture Wikibase",
+  "mediawiki": {
+    "api": "http://mediawiki-mediawiki-web-1:8080/w/api.php"
+  },
+  "wikibase": {
+    "site_iri": "http://localhost:8181/entity/",
+    "maxlag": 5,
+    "tag": "OpenRefine",
+    "properties": {
+      "instance_of": "P31",
+      "subclass_of": "P279"
+    }
+  },
+  "entity_types": [
+    {
+      "type": "item",
+      "site_iri": "http://localhost:8181/entity/",
+      "reconciliation_endpoint": "http://localhost:8181/w/api.php"
+    },
+    {
+      "type": "property",
+      "site_iri": "http://localhost:8181/entity/"
+    }
+  ],
+  "constraints": {
+    "property_constraint_pid": "P2302",
+    "exception_to_constraint_pid": "P2303",
+    "constraint_status_pid": "P2316",
+    "mandatory_constraint_qid": "Q21502408",
+    "suggestion_constraint_qid": "Q62026391",
+    "distinct_values_constraint_qid": "Q21502410"
+  },
+  "editgroups": {
+    "url_schema": "[[https://localhost:8181/wiki/Special:RecentChanges|Recent Changes]]"
+  }
+}

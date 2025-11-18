@@ -1,0 +1,32 @@
+# OpenRefine Docker Compose Configuration
+# Connected to local Wikibase for reconciliation
+# Uses local OpenRefine repository with Wikibase extension
+#
+# Run with:
+# docker compose -f configs/openrefine/docker-compose.yml up -d
+
+services:
+  openrefine:
+    build:
+      context: /home/pz/projects/TIB_RSE_v2/repos/OpenRefine
+      dockerfile: Dockerfile
+    container_name: openrefine
+    ports:
+      - "3333:3333"
+    volumes:
+      - openrefine-data:/data
+    environment:
+      - REFINE_MEMORY=2048M
+      - REFINE_PORT=3333
+    networks:
+      - nfdi4culture-net
+    restart: unless-stopped
+
+volumes:
+  openrefine-data:
+    driver: local
+
+networks:
+  nfdi4culture-net:
+    name: nfdi4culture-net
+    driver: bridge
