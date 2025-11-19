@@ -8,7 +8,7 @@
 
 ## Overview
 
-Successfully deployed OpenRefine from local source repository and configured it to connect with the local Wikibase instance for data reconciliation workflows. Demonstrated the complete integration pipeline from messy CSV data to structured Wikibase entities.
+Successfully deployed OpenRefine from local source repository and demonstrated complete data reconciliation workflow using Wikidata. While a Wikibase manifest was created for local integration, the reconciliation demonstration used Wikidata's reconci.link service since the local MediaWiki installation lacks a reconciliation endpoint. This demonstrates the identical workflow that would work with a properly configured Wikibase instance.
 
 ---
 
@@ -18,15 +18,18 @@ Successfully deployed OpenRefine from local source repository and configured it 
 ```
 OpenRefine (Port 3333)
     ↓
-Docker Network: nfdi4culture-net
+Wikidata Reconciliation Service (reconci.link)
     ↓
-MediaWiki/Wikibase (Port 8181)
+[Alternative: Local Wikibase via nfdi4culture-net]
+    ↓
+MediaWiki/Wikibase (Port 8181) - Available but lacks reconciliation API
 ```
 
 ### Components Deployed
-1. **OpenRefine 3.10-SNAPSHOT** - Built from local repository
-2. **Wikibase Reconciliation Service** - Configured via manifest
-3. **Sample Dataset** - 20 museum artworks with messy data
+1. **OpenRefine 3.10-SNAPSHOT** - Built from local repository (944s build time)
+2. **Wikidata Reconciliation Service** - Bundled reconci.link service
+3. **Wikibase Manifest** - Created for future local integration (currently unused)
+4. **Sample Dataset** - 20 museum artworks with 12 artist name variations
 
 ---
 
@@ -36,7 +39,7 @@ MediaWiki/Wikibase (Port 8181)
 
 #### Docker Configuration
 Created `configs/openrefine/docker-compose.yml`:
-- Built from local OpenRefine repository (`/repos/OpenRefine`)
+- Built from local OpenRefine repository (`repos/OpenRefine` inside `nfdi4culture-stack`)
 - Exposed on port 3333
 - Created dedicated data volume
 - Connected to shared `nfdi4culture-net` network
@@ -113,6 +116,7 @@ Created `openrefine.sh`:
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/configs/openrefine/docker-compose.yml"
+export STACK_REPOS_ROOT="${STACK_REPOS_ROOT:-$SCRIPT_DIR}"
 docker compose -f "$COMPOSE_FILE" "$@"
 ```
 
@@ -127,54 +131,57 @@ docker compose -f "$COMPOSE_FILE" "$@"
 
 ---
 
-## Reconciliation Workflow
+## Reconciliation Workflow (Actual Implementation)
 
-### Step 1: Import Dataset
+### Step 1: Import Dataset via Clipboard
 1. Access OpenRefine at http://localhost:3333
-2. Click "Create Project" → "This Computer"
-3. Upload `data/museum-artworks.csv`
+2. Click "Create Project" → "Clipboard"
+3. Paste CSV content from `data/museum-artworks.csv`
 4. Configure import options (CSV, UTF-8)
-5. Create project
+5. Create project "Clipboard" (ID: 2522811465384)
 
-### Step 2: Configure Wikibase Connection
-1. Go to "Extensions" → "Wikibase"
-2. Add new Wikibase instance
-3. Paste manifest URL or content from `nfdi4culture-wikibase-manifest.json`
-4. Save configuration
+### Step 2: Data Cleaning with Clustering
+1. Click "artist" column → "Edit cells" → "Cluster and edit"
+2. Select method: Key collision / Fingerprint keying function
+3. Review 3 clusters found:
+   - Cluster 1: 4 values → "V Van Gogh" (4 rows)
+   - Cluster 2: 4 values → "Vincent van Gogh" (7 rows)
+   - Cluster 3: 3 values → "van Gogh" (4 rows)
+4. Select all clusters and click "Merge Selected & Close"
+5. Result: Mass edit of 15 cells, normalized from 12 variations to 3 forms
 
-### Step 3: Reconcile Artist Names
-1. Click on "artist" column → "Reconcile" → "Start reconciling"
-2. Select "NFDI4Culture Wikibase" as service
-3. Choose reconciliation type: "Item"
-4. Start reconciliation process
-5. Review matches:
-   - All variations should match to Q1 (Vincent van Gogh)
-   - Accept high-confidence matches automatically
-   - Review and confirm low-confidence matches
+### Step 3: Reconcile to Wikidata
+1. Click "artist" column → "Reconcile" → "Start reconciling"
+2. Select "Wikidata reconci.link (en)" as service
+3. Choose reconciliation type: "Q5 (human)" for better accuracy
+4. Enable "Auto-match candidates with high confidence"
+5. Start reconciliation process
+6. Review matches in facets:
+   - Judgment facet: "matched: 7", "none: 13"
+   - Best candidate's score: 59-101
+   - Column header shows: "35% matched, 0% new, 65% to be reconciled"
 
-### Step 4: Reconcile Locations
-1. Click on "location" column → "Reconcile"
-2. Select Wikibase service
-3. Match institutions:
-   - "Museum of Modern Art", "MoMA" → Q3
-   - Other museums → Create new items or match existing
-4. Apply reconciliation
+### Step 4: Bulk Match High-Confidence Candidates
+1. Click "artist" column → "Reconcile" → "Actions" → "Match each cell to its best candidate"
+2. All 7 "Vincent van Gogh" cells matched to Q5582 (Vincent van Gogh)
+3. Confidence scores: 89-100%
+4. Entity details: Dutch Post-Impressionist painter (1853-1890)
 
-### Step 5: Clean and Transform
-1. Standardize date formats using GREL expressions
-2. Normalize medium descriptions
-3. Parse dimensions into structured data
-4. Add any missing properties
+### Step 5: Add Entity Identifiers Column
+1. Click "artist" column → "Reconcile" → "Add entity identifiers column..."
+2. Name new column: "artist_wikidata_id"
+3. OpenRefine fills 7 rows with `cell.recon.match.id` (Q5582)
+4. Unmatched cells remain empty
 
-### Step 6: Export to Wikibase
-1. Click "Export" → "Wikibase schema"
-2. Define schema:
-   - Title → Label
-   - Artist → P1 (creator) statement
-   - Location → P2 (collection) statement (if created)
-   - Date → P3 (date) statement (if created)
-3. Preview edits
-4. Upload to Wikibase
+### Step 6: Export Reconciled Data
+1. Click "Export" → "Comma-separated value"
+2. Save as `data/museum-artworks-reconciled.csv`
+3. File now contains artist_wikidata_id column with entity references
+4. Ready for:
+   - Import into Wikibase
+   - SPARQL queries
+   - Further enrichment
+   - System integration
 
 ---
 
@@ -274,15 +281,26 @@ nfdi4culture-stack/
 ├── configs/
 │   └── openrefine/
 │       ├── docker-compose.yml                    # OpenRefine service definition
-│       └── nfdi4culture-wikibase-manifest.json   # Wikibase connection config
+│       └── nfdi4culture-wikibase-manifest.json   # Wikibase manifest (for future use)
 ├── data/
-│   └── museum-artworks.csv                       # Sample reconciliation dataset
+│   ├── museum-artworks.csv                       # Original dataset (20 rows)
+│   └── museum-artworks-reconciled.csv            # With artist_wikidata_id column
+├── screenshots/
+│   ├── day2-openrefine-home.png                  # Create Project page
+│   ├── day2-openrefine-extensions.png            # Wikidata extension
+│   ├── day2-openrefine-csv-preview.png           # Import preview
+│   ├── day2-openrefine-project-loaded.png        # Full project view
+│   ├── day2-openrefine-clustering-results.png    # 3 clusters found
+│   ├── day2-openrefine-cleaned-data.png          # After clustering
+│   ├── day2-openrefine-reconciliation-dialog.png # Service selection
+│   └── day2-openrefine-reconciled-data.png       # Final with Q5582 links
 ├── openrefine.sh                                 # Helper script
 └── docs/
-    └── 02-openrefine-setup.md                    # This document
+    ├── 02-openrefine-setup.md                    # This document
+    └── 02b-reconciliation-workflow.md            # Detailed workflow guide
 
 repos/OpenRefine/
-└── Dockerfile                                     # Custom build configuration
+└── Dockerfile                                     # Custom build configuration (referenced via STACK_REPOS_ROOT)
 ```
 
 ---
@@ -324,25 +342,37 @@ repos/OpenRefine/
 
 ---
 
-## Appendix: Sample Data Statistics
+## Appendix: Actual Results
 
-**Dataset:** museum-artworks.csv
+**Original Dataset:** museum-artworks.csv
 - **Total records:** 20
 - **Artist name variations:** 12 unique formats
 - **Date range:** 1885-1890
 - **Unique locations:** 14 museums
-- **Media types:** 3 variations (oil/oil on canvas/oil paint)
-- **Reconciliation target:** Q1 (Vincent van Gogh) for all artist fields
+- **Media types:** 3 variations
 
-**Quality Issues Included:**
-- Case inconsistencies (11 records)
-- Name order variations (5 records)
-- Abbreviations (4 records)
-- Initial-only names (3 records)
-- Spacing issues (2 records)
+**Clustering Results:**
+- **Method:** Key collision / Fingerprint
+- **Clusters found:** 3
+- **Cells modified:** 15
+- **Normalized forms:** 3 ("Vincent van Gogh", "van Gogh", "V Van Gogh")
 
-This dataset is ideal for demonstrating:
-1. Fuzzy matching algorithms
-2. Entity resolution
-3. Data normalization
-4. Wikibase data integration
+**Reconciliation Results:**
+- **Service:** Wikidata reconci.link (en)
+- **Target entity:** Q5582 (Vincent van Gogh)
+- **Match rate:** 35% (7/20 rows)
+- **Confidence scores:** 89-100%
+- **Unmatched:** 13 rows (variations not exact enough for auto-match)
+
+**Export Results:**
+- **File:** museum-artworks-reconciled.csv
+- **New column:** artist_wikidata_id
+- **Entity IDs:** Q5582 in 7 matched rows
+- **Use cases:** Wikibase import, SPARQL queries, system integration
+
+**Demonstrated Capabilities:**
+1. ✅ Data quality improvement via clustering
+2. ✅ Entity resolution with external knowledge bases
+3. ✅ Semi-automated reconciliation workflow
+4. ✅ Export of linked open data with entity references
+5. ✅ Complete workflow documentation with 8 screenshots

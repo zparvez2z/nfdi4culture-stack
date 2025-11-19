@@ -1,0 +1,52 @@
+{
+  "name": "TIB-RSE-Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "runArgs": [
+    "--init",
+    "--privileged"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "java.configuration.checkProjectSettingsExclusions": false
+      },
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "pivotal.vscode-boot-dev-pack",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "vue.volar"
+      ]
+    }
+  },
+  "forwardPorts": [
+    8080,
+    9000,
+    8181,
+    8282
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "Annotation Service",
+      "onAutoForward": "openBrowser"
+    },
+    "9000": {
+      "label": "Frontend",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "remoteEnv": {
+    "SPRING_PROFILES_ACTIVE": "dev,api-docs"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "docker info >/dev/null 2>&1 && echo 'Docker daemon ready' || sudo service docker start",
+  "updateContentCommand": "bash -lc 'if [ -f repos/annotation-service/docker-compose-dev.yml ]; then docker compose -f repos/annotation-service/docker-compose-dev.yml up -d; else echo \"annotation-service compose file not found; skipping automatic startup.\"; fi'",
+  "shutdownAction": "stopContainer"
+}

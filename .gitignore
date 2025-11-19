@@ -30,3 +30,7 @@ temp/
 *.backup
 *.bak
 *.old
+
+# External workspaces populated locally
+repos/
+!repos/.gitkeep

@@ -1,24 +1,27 @@
 # OpenRefine Reconciliation Workflow Guide
 
-## Step-by-Step: Reconciling Museum Data to Wikibase
+## Step-by-Step: Reconciling Museum Data to Wikidata
 
-This guide walks through the actual reconciliation process using the sample dataset.
+**Note:** This guide reflects the actual Day 2 implementation using Wikidata reconciliation. While a local Wikibase manifest was created, the demonstration used Wikidata's reconci.link service since the local MediaWiki lacks a reconciliation endpoint. The workflow is identical to what would be used with a properly configured Wikibase instance.
 
 ### Prerequisites
 - OpenRefine running at http://localhost:3333
-- MediaWiki/Wikibase running at http://localhost:8181
 - Sample data: `data/museum-artworks.csv`
+- Internet connection for Wikidata API access
 
 ---
 
 ## Part 1: Import Data into OpenRefine
 
-### 1. Create New Project
+### 1. Create New Project via Clipboard
 1. Open http://localhost:3333
 2. Click **"Create Project"** tab
-3. Select **"This Computer"**
-4. Click **"Choose Files"** and select `museum-artworks.csv`
-5. Click **"Next »"**
+3. Select **"Clipboard"**
+4. Open `data/museum-artworks.csv` in a text editor and copy all content
+5. Paste CSV data into OpenRefine's text area
+6. Click **"Next »"**
+
+**Why Clipboard?** In Docker environments, direct file access can be restricted. The clipboard method is a reliable workaround.
 
 ### 2. Configure Import Settings
 - **Character encoding:** UTF-8
@@ -30,300 +33,313 @@ This guide walks through the actual reconciliation process using the sample data
 
 Click **"Create Project »"**
 
-**Result:** You should see 20 rows with columns: id, title, artist, date, location, medium, dimensions
+**Result:** 
+- Project created: "Clipboard" (ID: 2522811465384)
+- 20 rows loaded
+- Columns: id, title, artist, date, location, medium, dimensions
+- Artist column shows 12 different name variations
 
 ---
 
-## Part 2: Configure Wikibase Connection
+## Part 2: Data Cleaning with Clustering
 
-### 1. Add Wikibase Manifest
-1. Click **"Extensions"** in top menu
-2. Select **"Wikibase"** → **"Manage Wikibase instances"**
-3. Click **"Add Wikibase"**
-4. Choose **"Add Wikibase manifest"**
+### 1. Open Clustering Dialog
+1. Click on the **"artist"** column dropdown (▼)
+2. Select **"Edit cells"** → **"Cluster and edit..."**
+3. Clustering dialog opens showing potential duplicates
 
-### 2. Load Manifest
-**Option A - From File:**
-- Paste the full path: `/home/pz/projects/TIB_RSE_v2/nfdi4culture-stack/configs/openrefine/nfdi4culture-wikibase-manifest.json`
+### 2. Configure Clustering Method
+- **Method:** Key collision
+- **Keying Function:** fingerprint (default)
+- Click **"Run"** or wait for auto-detection
 
-**Option B - Paste JSON:**
-```json
-{
-  "version": "2.0",
-  "name": "NFDI4Culture Wikibase",
-  "mediawiki": {
-    "api": "http://mediawiki-mediawiki-web-1:8080/w/api.php"
-  },
-  "wikibase": {
-    "site_iri": "http://localhost:8181/entity/",
-    "maxlag": 5,
-    "tag": "OpenRefine"
-  }
-}
-```
+### 3. Review Clusters Found
 
-3. Click **"Add"** or **"OK"**
+**Cluster 1:** 4 values → "V Van Gogh" (4 rows)
+- Values: "V Van Gogh", "V van Gogh", "V. van Gogh", etc.
+- Cluster size: 4 rows
+- Average length: ~10 characters
 
-**Verification:** "NFDI4Culture Wikibase" should appear in the list of available Wikibase instances.
+**Cluster 2:** 4 values → "Vincent van Gogh" (7 rows)
+- Values: "Vincent van Gogh", "vincent van gogh", "Vincent Van Gogh", etc.
+- Cluster size: 7 rows
+- Average length: ~16 characters
+
+**Cluster 3:** 3 values → "van Gogh" (4 rows)
+- Values: "Van Gogh", "van Gogh", "VanGogh"
+- Cluster size: 4 rows
+- Average length: ~8 characters
+
+### 4. Merge Clusters
+1. Select all 3 clusters by checking their boxes
+2. Review the "New Cell Value" for each (usually the most common form)
+3. Click **"Merge Selected & Close"**
+
+**Result:**
+- Notification: "Mass edit 15 cells in column artist"
+- Undo/Redo: Now shows 1/1
+- Artist names normalized from 12 variations to 3 standard forms
+- Data quality significantly improved before reconciliation
 
 ---
 
-## Part 3: Reconcile Artist Names
+## Part 3: Reconcile to Wikidata
 
 ### 1. Start Reconciliation
 1. Click on the **"artist"** column dropdown (▼)
 2. Select **"Reconcile"** → **"Start reconciling..."**
-3. Choose **"NFDI4Culture Wikibase"** as the service
-4. Select reconciliation type: **"Item"** (or leave as "Reconcile against no particular type")
+3. Choose **"Wikidata reconci.link (en)"** as the service
+   - This is bundled with OpenRefine (no configuration needed)
+   - Service URL: https://wikidata.reconci.link/en/api
 
 ### 2. Configure Reconciliation Settings
-- **Auto-match candidates with high confidence:** Checked (recommended)
+- **Reconcile against type:** Select "Q5 (human)" for better accuracy
+  - This limits results to person entities
+  - Improves matching for artist names
+- **Auto-match candidates with high confidence:** Checked ✓
 - **Maximum number of results:** 10
 
 Click **"Start Reconciling"**
 
-### 3. Review Results
-OpenRefine will show:
-- **Green checkmark (✓):** Auto-matched to Q1 (Vincent van Gogh)
-- **Yellow icon:** Multiple candidates
-- **Red X:** No match found
+### 3. Monitor Reconciliation Progress
+- OpenRefine queries Wikidata for each unique artist name
+- Progress indicator shows in column header
+- Process takes 10-30 seconds for 20 rows
 
-### 4. Manual Verification
-For any non-auto-matched cells:
-1. Click on the cell
-2. Review suggested matches
-3. Click **"Match this cell"** for the correct entity (Q1)
-4. Or use **"Match all identical cells"** to apply to all similar values
+### 4. Review Results
+Column header now shows reconciliation statistics:
+- **"35% matched, 0% new, 65% to be reconciled"**
 
-**Expected Result:** All 20 artist names should reconcile to **Q1 (Vincent van Gogh)**
+Cell indicators:
+- **Blue hyperlink (Q5582):** Auto-matched to entity
+- **Single gray box:** One candidate found, needs review
+- **Multiple gray boxes:** Multiple candidates
+- **No indicator:** No matches found
+
+### 5. Check Matched Entity
+Click on any blue Q5582 link to see:
+- **Name:** Vincent van Gogh
+- **Description:** Dutch Post-Impressionist painter (1853-1890)
+- **Confidence score:** 89-100%
+- **Link:** https://www.wikidata.org/wiki/Q5582
+
+### 6. Bulk Match Remaining Cells
+1. Click **"artist"** column dropdown
+2. Select **"Reconcile"** → **"Actions"** → **"Match each cell to its best candidate"**
+3. All "Vincent van Gogh" cells (7 total) now matched to Q5582
+
+**Actual Result:** 
+- **Matched:** 7 rows (35%)
+- **Unmatched:** 13 rows (variations like "van Gogh", "V Van Gogh" need manual review)
+- **Target entity:** Q5582 (Vincent van Gogh)
+- **Confidence:** 89-100% for matched cells
 
 ---
 
-## Part 4: Add Reconciliation Facets
+## Part 4: Analyze with Reconciliation Facets
 
 ### 1. Create Judgment Facet
 1. Click **"artist"** column dropdown
 2. Select **"Facet"** → **"Reconciliation facets"** → **"Judgment facets"**
 
-You'll see:
-- **Matched:** Number of cells successfully reconciled
-- **New:** Cells marked for new entity creation
-- **None:** Unreconciled cells
+Facet shows:
+- **matched:** 7 (cells successfully reconciled to Q5582)
+- **none:** 13 (unmatched cells - variations not exact enough)
+- **new:** 0 (no cells marked for new entity creation)
 
-### 2. Filter by Judgment
-- Click on **"matched"** to see only reconciled rows
-- Click on **"none"** to see unreconciled rows that need attention
+### 2. Create Score Facet
+1. Click **"artist"** column dropdown
+2. Select **"Facet"** → **"Reconciliation facets"** → **"Best candidate's score"**
 
----
+Score distribution:
+- Range: 59-101
+- High scores (89-100): "Vincent van Gogh" exact matches
+- Medium scores (59-75): "van Gogh" partial matches
+- No score: Unmatched cells
 
-## Part 5: Reconcile Locations (Optional)
-
-Since we only have Q3 (Museum of Modern Art) in our Wikibase, we can:
-
-### Option A: Reconcile "Museum of Modern Art" to Q3
-1. Click **"location"** column dropdown
-2. **"Reconcile"** → **"Start reconciling..."**
-3. Select **"NFDI4Culture Wikibase"**
-4. Manually match "Museum of Modern Art" and "MoMA" to Q3
-
-### Option B: Create New Items for Other Museums
-1. After reconciliation, cells marked as **"New"** can be exported
-2. Use Wikibase schema to create new items for each museum
+### 3. Filter by Judgment
+- Click **"matched"** to see only 7 reconciled rows (Sunflowers, The Bedroom, etc.)
+- Click **"none"** to see 13 unreconciled rows needing manual review
+- This helps prioritize data cleanup efforts
 
 ---
 
-## Part 6: Create Wikibase Upload Schema
+## Part 5: Add Entity Identifiers Column
 
-### 1. Open Schema Editor
-1. Click **"Extensions"** → **"Wikibase"** → **"Edit Wikibase schema"**
-2. Select **"NFDI4Culture Wikibase"** as target
+### 1. Create Column with Entity IDs
+1. Click **"artist"** column dropdown
+2. Select **"Reconcile"** → **"Add entity identifiers column..."**
+3. Dialog opens: "Add column containing entity identifiers on 'artist'"
 
-### 2. Define Schema Structure
+### 2. Configure New Column
+- **New column name:** Type `artist_wikidata_id`
+  - Descriptive name indicating these are Wikidata entity references
+  - Could also use: `artist_qid`, `artist_entity`, `wikidata_id`
+- Click **"OK"**
 
-**For Item (Artwork):**
-```
-Item: Create new item for each row
-├── Label: cells["title"].value
-├── Description: "painting by " + cells["artist"].recon.match.name + " (" + cells["date"].value + ")"
-└── Statements:
-    ├── P1 (creator) → cells["artist"].recon.match.id
-    └── [Add more properties as needed]
-```
+### 3. Review Results
+OpenRefine notification:
+- "Create new column artist_wikidata_id based on column artist by filling 7 rows with cell.recon.match.id"
+- Undo/Redo: Now shows 4/4 (Import → Cluster → Reconcile → Entity IDs)
 
-**Schema JSON Example:**
-```json
-{
-  "itemDocuments": [
-    {
-      "subject": {
-        "type": "new-item"
-      },
-      "nameDescs": [
-        {
-          "type": "label",
-          "value": {
-            "type": "cell",
-            "columnName": "title"
-          }
-        },
-        {
-          "type": "description", 
-          "value": {
-            "type": "constant",
-            "value": "painting in museum collection"
-          }
-        }
-      ],
-      "statementGroups": [
-        {
-          "property": {
-            "type": "wikibase-item",
-            "id": "P1"
-          },
-          "statements": [
-            {
-              "value": {
-                "type": "wikibase-item",
-                "columnName": "artist"
-              }
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+### 4. Verify Entity IDs
+New column shows:
+- **Row 2 (Sunflowers, Vincent van Gogh):** Q5582
+- **Row 4 (The Bedroom, Vincent van Gogh):** Q5582
+- **Row 5 (Café Terrace, Vincent van Gogh):** Q5582
+- **Row 8 (Potato Eaters, Vincent van Gogh):** Q5582
+- **+ 3 more matched rows:** Q5582
+- **Rows 1, 3, 6, 7, 9, 10...:** (empty - unmatched)
+
+**Why This Matters:**
+- Basic CSV export doesn't include reconciliation metadata
+- Entity ID column makes links explicit and exportable
+- Q numbers enable: SPARQL queries, system integration, Wikibase import
+
+---
+
+## Part 6: Export Reconciled Data
+
+---
+
+## Part 7: Export to CSV with Entity IDs
+
+### 1. Export Reconciled Data
+1. Click **"Export"** button (top right)
+2. Select **"Comma-separated value"**
+3. File downloads as `Clipboard.csv`
+
+### 2. Verify Export Content
+Open downloaded CSV and check:
+- All original columns present (id, title, artist, date, location, medium, dimensions)
+- **New column:** artist_wikidata_id
+- Sample rows:
+  ```csv
+  id,title,artist,artist_wikidata_id,date,location,medium,dimensions
+  1,The Starry Night,van Gogh,,1889,Museum of Modern Art,Oil on canvas,73.7 × 92.1 cm
+  2,Sunflowers,Vincent van Gogh,Q5582,1888,National Gallery London,oil on canvas,92.1 × 73 cm
+  4,The Bedroom,Vincent van Gogh,Q5582,1888,Van Gogh Museum,oil paint,72.4 cm × 91.3 cm
+  ```
+
+### 3. Save for Project
+```bash
+cp Clipboard.csv data/museum-artworks-reconciled.csv
 ```
 
-### 3. Preview Schema
-Click **"Preview"** to see what will be uploaded:
-- New items to be created
-- Statements to be added
-- Labels and descriptions
+### 4. What You've Achieved
+✅ **Data cleaned:** 15 cells normalized via clustering  
+✅ **Entities matched:** 7 rows linked to Wikidata Q5582  
+✅ **Metadata captured:** Entity IDs exported as explicit column  
+✅ **Ready for integration:** CSV can now be imported to Wikibase, queried via SPARQL, or used in other systems
 
 ---
 
-## Part 7: Upload to Wikibase
+## Part 8: Additional Export Options
 
-### 1. Authenticate
-1. In schema editor, click **"Upload to Wikibase"**
-2. You'll be redirected to MediaWiki login
-3. Login with Admin credentials from `.env`
-4. Authorize OpenRefine to edit on your behalf
+### Export Formats Available
+1. Click **"Export"** (top right) for multiple format options:
+   - **CSV** - Standard spreadsheet format (what we used)
+   - **Excel** - .xlsx format with formatting
+   - **HTML Table** - For web display
+   - **Wikibase QuickStatements** - For bulk Wikibase uploads
+   - **Custom tabular exporter** - Fine-grained control
 
-### 2. Configure Upload
-- **Edit summary:** "Imported museum artworks from OpenRefine"
-- **Maximum edits per batch:** 50
-- **Maximum lag:** 5 seconds
-
-### 3. Start Upload
-Click **"Upload"** and monitor progress:
-- Shows number of edits made
-- Displays any errors
-- Provides links to created/edited items
-
-### 4. Verify in Wikibase
-Visit http://localhost:8181 and check:
-- New items created (Q4, Q5, Q6... for each artwork)
-- Statements linking to Q1 (Vincent van Gogh)
-- Edit history shows "OpenRefine" tag
-
----
-
-## Part 8: Export Results
-
-### Export Reconciled Data
-1. Click **"Export"** (top right)
-2. Choose format:
-   - **CSV** - For further processing
-   - **RDF** - For semantic web applications
-   - **Wikibase QuickStatements** - For bulk uploads
-
-### Export Schema
-1. **"Extensions"** → **"Wikibase"** → **"Export schema"**
-2. Save JSON file for reuse with similar datasets
+### Export Project for Reuse
+1. Click **"Export"** → **"OpenRefine project archive"**
+2. Saves entire project including:
+   - Data
+   - Reconciliation metadata
+   - Undo/Redo history
+   - Custom transformations
+3. Can be re-imported later to continue work
 
 ---
 
 ## Troubleshooting
 
-### Reconciliation Service Not Found
-**Problem:** "NFDI4Culture Wikibase" doesn't appear in reconciliation options
+### Wikidata Service Not Available
+**Problem:** "Wikidata reconci.link" doesn't appear in reconciliation options
 
 **Solution:**
-1. Check manifest is loaded: **Extensions** → **Wikibase** → **Manage Wikibase instances**
-2. Verify MediaWiki container is running: `./mediawiki.sh ps`
-3. Test API endpoint from OpenRefine container:
+1. Check Wikidata extension is enabled:
+   - Go to **Extensions** in OpenRefine
+   - Verify "wikidata" extension shows "bundled: true"
+2. Restart OpenRefine if needed:
    ```bash
-   docker exec openrefine curl http://mediawiki-mediawiki-web-1:8080/w/api.php?action=query
+   ./openrefine.sh down && ./openrefine.sh up -d
    ```
+3. Check internet connectivity (Wikidata requires external API access)
 
 ### No Matches Found
 **Problem:** All artist names show "No matches"
 
 **Solution:**
-1. Check Q1 exists in Wikibase: http://localhost:8181/wiki/Item:Q1
-2. Verify reconciliation endpoint in manifest
-3. Try broader search: Remove specific reconciliation type
+1. Try clustering first to normalize name variations
+2. Use broader reconciliation type (remove "Q5 (human)" constraint)
+3. Check spelling - Wikidata requires reasonable similarity
+4. Try searching manually: https://www.wikidata.org/w/index.php?search=Vincent+van+Gogh
 
-### Upload Fails with "Permission Denied"
-**Problem:** Cannot upload to Wikibase
+### Low Match Rate
+**Problem:** Only 35% matched (expected more)
+
+**Explanation:**
+This is normal! Variations like "van Gogh", "V Van Gogh", "V.V.Gogh" are too abbreviated for auto-matching. Options:
+1. **Manually review:** Click each cell, select Q5582
+2. **Improve clustering:** Try different keying functions
+3. **Normalize names:** Use GREL to expand abbreviations
+4. **Bulk match:** After one cell matches, use "Match all identical cells"
+
+### Export Missing Entity IDs
+**Problem:** Exported CSV doesn't have Q numbers
 
 **Solution:**
-1. Re-authenticate in MediaWiki
-2. Check Admin user has edit permissions
-3. Verify bot passwords are configured (if using bot account)
-
-### Network Errors
-**Problem:** "Connection refused" or timeout errors
-
-**Solution:**
-1. Verify both containers are on same network:
-   ```bash
-   docker network inspect nfdi4culture-net
-   ```
-2. Check MediaWiki API is accessible:
-   ```bash
-   curl http://localhost:8181/w/api.php
-   ```
+You MUST add entity identifiers column first:
+1. **artist** → **Reconcile** → **Add entity identifiers column...**
+2. Name it (e.g., "artist_wikidata_id")
+3. Then export - Q numbers will be included
 
 ---
 
-## Expected Results
+## Actual Results Achieved
 
-After completing this workflow, you should have:
-- ✅ 20 rows of museum data imported into OpenRefine
-- ✅ All artist names reconciled to Q1 (Vincent van Gogh)
-- ✅ Multiple location names reconciled to Q3 (MoMA) or marked for new item creation
-- ✅ Wikibase schema defined for artwork items
-- ✅ (Optional) New items created in Wikibase for each artwork
-- ✅ Demonstration of data quality improvement through reconciliation
+After completing Day 2 workflow:
+- ✅ 20 rows imported via clipboard method (Project: "Clipboard", ID: 2522811465384)
+- ✅ Data clustering performed: 15 cells normalized from 12 variations to 3 forms
+- ✅ Reconciliation to Wikidata: 7 cells matched to Q5582 (Vincent van Gogh)
+- ✅ Entity IDs extracted: artist_wikidata_id column created with Q5582 values
+- ✅ Reconciled data exported: museum-artworks-reconciled.csv with entity references
+- ✅ Complete workflow documented: 8 screenshots captured at key stages
+- ✅ Match rate: 35% (7/20 rows) - realistic result showing need for manual review
+- ✅ Demonstrated: Data quality improvement, entity resolution, linked open data export
 
 ---
 
-## Next Steps
+## Next Steps (Day 3+)
 
-1. **Expand Dataset:** Add more artists, create Q items for them
-2. **Add Properties:** Create P2 (collection), P3 (date), P4 (medium)
-3. **Reconcile Dates:** Use OpenRefine's date parsing with Wikibase time values
-4. **Link External Sources:** Reconcile to Wikidata, Getty AAT
-5. **Automate:** Create OpenRefine workflows for batch processing
+1. **ANTELOPE Integration:** Deploy terminology service for semantic annotations
+2. **Wikibase Import:** Upload reconciled data to create artwork items (Q4-Q23)
+3. **Add Properties:** Create P2 (collection), P3 (inception), P4 (medium)
+4. **Reconcile Locations:** Match museums to Wikidata entities or create local items
+5. **Kompakkt Integration:** Link 3D models to Wikibase entities created from OpenRefine
 
 ---
 
 ## Key Learnings
 
-**Data Quality:**
-- Reconciliation handles various name formats automatically
-- Fuzzy matching works well for entity resolution
-- Manual review is still important for edge cases
+**Data Quality Best Practices:**
+- ✅ **Cluster before reconciling:** Normalizing data first improves match accuracy significantly
+- ✅ **Realistic expectations:** 35% auto-match rate is normal for varied data
+- ✅ **Manual review essential:** Fuzzy matching needs human verification for ambiguous cases
+- ✅ **Entity ID export:** Must explicitly create column - reconciliation metadata not auto-exported
 
-**Wikibase Integration:**
-- Manifest configuration enables custom Wikibase instances
-- Schema editor provides flexible entity modeling
-- Edit tracking maintains data provenance
+**Wikidata Reconciliation:**
+- ✅ **Bundled service:** Wikidata reconci.link works out-of-the-box with OpenRefine
+- ✅ **Type constraints improve accuracy:** Using Q5 (human) filters better than generic search
+- ✅ **Confidence scores matter:** 89-100% scores are safe to auto-match, lower need review
+- ✅ **Same workflow as Wikibase:** Would work identically with local instance having reconciliation API
 
 **Workflow Efficiency:**
-- Bulk operations save time vs. manual data entry
-- Facets enable quick filtering and quality control
-- Export options support multiple downstream uses
+- ✅ **Clipboard import:** Reliable workaround for Docker file access restrictions
+- ✅ **Undo/Redo tracking:** Makes experimentation safe (4 operations tracked)
+- ✅ **Facets for QA:** Judgment and score facets essential for quality control
+- ✅ **Linked open data ready:** Exported CSV with Q numbers enables system integration

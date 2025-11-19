@@ -6,6 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/.env"
 COMPOSE_FILE="${SCRIPT_DIR}/configs/mediawiki/docker-compose.local.yml"
+export STACK_REPOS_ROOT="${STACK_REPOS_ROOT:-$SCRIPT_DIR}"
 
 # Check if .env exists
 if [ ! -f "$ENV_FILE" ]; then

@@ -6,14 +6,19 @@
 #
 # Or from project root:
 # docker compose --env-file .env -f configs/mediawiki/docker-compose.local.yml up -d
+#
+# Optional override:
+#   STACK_REPOS_ROOT=/absolute/path/to/nfdi4culture-stack \
+#   docker compose ...
+# Defaults assume this file lives under configs/mediawiki/ relative to the repo root.
 
 services:
   mediawiki:
     image: docker-registry.wikimedia.org/dev/bookworm-php83-fpm:1.0.0
     user: "${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}"
     volumes:
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki:/var/www/html/w:cached"
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached"
     environment:
       COMPOSER_CACHE_DIR: '/var/www/html/w/cache/composer'
       MW_SERVER: 'http://localhost:${MW_DOCKER_PORT:-8181}'
@@ -42,8 +47,8 @@ services:
     ports:
       - "${MW_DOCKER_PORT:-8181}:8080"
     volumes:
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki:/var/www/html/w:cached"
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached"
     environment:
       MW_LOG_DIR: /var/www/html/w/cache
       MW_DOCKER_PORT: "${MW_DOCKER_PORT:-8181}"
@@ -56,8 +61,8 @@ services:
     image: docker-registry.wikimedia.org/dev/bookworm-php83-jobrunner:1.0.0
     user: "${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}"
     volumes:
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki:/var/www/html/w:cached
-      - /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki:/var/www/html/w:cached"
+      - "${STACK_REPOS_ROOT:-../..}/repos/mediawiki-extensions-Wikibase:/var/www/html/w/extensions/Wikibase:cached"
     environment:
       MW_LOG_DIR: /var/www/html/w/cache
       MW_INSTALL_PATH: /var/www/html/w

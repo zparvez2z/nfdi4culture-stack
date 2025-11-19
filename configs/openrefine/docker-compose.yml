@@ -4,11 +4,16 @@
 #
 # Run with:
 # docker compose -f configs/openrefine/docker-compose.yml up -d
+#
+# Optional override (e.g., custom workspace path):
+#   STACK_REPOS_ROOT=/absolute/path/to/nfdi4culture-stack \
+#   docker compose -f configs/openrefine/docker-compose.yml up -d
+# Defaults assume this file lives under configs/openrefine/ relative to the repo root.
 
 services:
   openrefine:
     build:
-      context: /home/pz/projects/TIB_RSE_v2/repos/OpenRefine
+      context: "${STACK_REPOS_ROOT:-../..}/repos/OpenRefine"
       dockerfile: Dockerfile
     container_name: openrefine
     ports:

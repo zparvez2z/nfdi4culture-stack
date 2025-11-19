@@ -43,9 +43,11 @@ Deploy MediaWiki with Wikibase extension using local repositories and Wikimedia 
 
 ### 1. Repository Preparation
 
-Local repositories used:
-- `/home/pz/projects/TIB_RSE_v2/repos/mediawiki` (MediaWiki 1.46.0-alpha)
-- `/home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase`
+Local repositories used (checked out under `nfdi4culture-stack/repos`):
+- `repos/mediawiki` (MediaWiki 1.46.0-alpha)
+- `repos/mediawiki-extensions-Wikibase`
+
+> Tip: all helper scripts export `STACK_REPOS_ROOT` to the repository root so Docker Compose resolves these mounts correctly inside Codespaces and local shells. Override `STACK_REPOS_ROOT` if you keep the repos elsewhere.
 
 ### 2. Docker Compose Configuration
 
@@ -55,7 +57,7 @@ Created `configs/mediawiki/docker-compose.local.yml` with:
 - Environment variables for database connection
 - Shared volumes across mediawiki, web, and jobrunner services
 
-**Key Learning:** Docker volume mounts with relative paths don't always resolve correctly from docker-compose file location. Using absolute paths resolved the issue.
+**Key Learning:** Docker volume mounts need the real host path. The compose file now derives it from `STACK_REPOS_ROOT` (defaulting to the workspace root), so the stack works both locally and in Codespaces without editing the file.
 
 ### 3. Dependency Installation
 
@@ -145,7 +147,7 @@ Successfully created **Q1: Vincent van Gogh**
 
 **Problem:** Relative paths in docker-compose volumes (`../../repos/mediawiki`) resulted in empty directories inside containers.
 
-**Solution:** Changed to absolute paths (`/home/pz/projects/TIB_RSE_v2/repos/mediawiki`). Restarted containers.
+**Solution:** Introduced the `STACK_REPOS_ROOT` convention so compose files compute absolute paths at runtime (defaulting to the stack root). Restarted containers after exporting `STACK_REPOS_ROOT`.
 
 **Result:** MediaWiki files successfully visible in all three containers (mediawiki, mediawiki-web, mediawiki-jobrunner).
 
@@ -201,19 +203,19 @@ Successfully created **Q1: Vincent van Gogh**
 
 ## Files Created/Modified
 
-1. `/home/pz/projects/TIB_RSE_v2/nfdi4culture-stack/configs/mediawiki/docker-compose.local.yml`
+1. `nfdi4culture-stack/configs/mediawiki/docker-compose.local.yml`
    - Complete docker-compose configuration
    - 4 services with proper volume mounts
 
-2. `/home/pz/projects/TIB_RSE_v2/nfdi4culture-stack/.env`
+2. `nfdi4culture-stack/.env`
    - Secure alphanumeric passwords
    - Database credentials
 
-3. Local repository files:
-   - `/home/pz/projects/TIB_RSE_v2/repos/mediawiki/LocalSettings.php` (generated)
-   - `/home/pz/projects/TIB_RSE_v2/repos/mediawiki/composer.lock` (updated)
-   - `/home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase/composer.lock` (generated)
-   - `/home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase/vendor/` (61 packages)
+3. Local repository files (under `nfdi4culture-stack/repos`):
+   - `repos/mediawiki/LocalSettings.php` (generated)
+   - `repos/mediawiki/composer.lock` (updated)
+   - `repos/mediawiki-extensions-Wikibase/composer.lock` (generated)
+   - `repos/mediawiki-extensions-Wikibase/vendor/` (61 packages)
 
 ## Development Workflow
 
@@ -256,5 +258,5 @@ This approach demonstrates:
 - MediaWiki Development: https://www.mediawiki.org/wiki/MediaWiki
 - Wikibase Repository: https://www.mediawiki.org/wiki/Wikibase
 - Wikimedia Development Images: https://docker-registry.wikimedia.org/
-- Local MediaWiki Repo: /home/pz/projects/TIB_RSE_v2/repos/mediawiki
-- Local Wikibase Repo: /home/pz/projects/TIB_RSE_v2/repos/mediawiki-extensions-Wikibase
+- Local MediaWiki Repo: nfdi4culture-stack/repos/mediawiki
+- Local Wikibase Repo: nfdi4culture-stack/repos/mediawiki-extensions-Wikibase

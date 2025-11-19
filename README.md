@@ -56,13 +56,21 @@ This project demonstrates the deployment, orchestration, and integration of five
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/nfdi4culture-stack.git
+git clone https://github.com/zparvez2z/nfdi4culture-stack.git
 cd nfdi4culture-stack
 
 # Copy environment template and configure
 cp .env.example .env
 # Edit .env with your passwords and configuration
 nano .env
+
+# Populate repos/ with the upstream projects (examples)
+mkdir -p repos
+# Replace the URLs below with your forks or mirrors as needed
+git clone https://gerrit.wikimedia.org/r/mediawiki/core repos/mediawiki
+git clone https://gerrit.wikimedia.org/r/mediawiki/extensions/Wikibase repos/mediawiki-extensions-Wikibase
+git clone https://github.com/YOUR_Fork/annotation-service repos/annotation-service
+git clone https://github.com/OpenRefine/OpenRefine repos/OpenRefine
 
 # Start MediaWiki + Wikibase
 ./mediawiki.sh up -d
@@ -81,6 +89,8 @@ nano .env
 - **Admin Login:** Use credentials from `.env` (MW_ADMIN_USER / MW_ADMIN_PASS)
 
 ### Management Commands
+
+> **Note:** Helper scripts such as `mediawiki.sh`, `openrefine.sh`, and the compose files rely on the `repos/` directory living inside the stack root. They export `STACK_REPOS_ROOT` automatically, so as long as you clone the upstream projects into `nfdi4culture-stack/repos`, no extra configuration is needed.
 
 #### MediaWiki/Wikibase
 ```bash
@@ -150,12 +160,11 @@ nano .env
 - [x] MediaWiki + Wikibase deployed with local repositories
 - [x] Docker Compose orchestration with environment variables
 - [x] First Wikibase item created (Q1: Vincent van Gogh)
-- [x] Documentation written (Day 1 complete)
-- [ ] OpenRefine configured
-- [ ] ANTELOPE integrated
+- [x] Documentation written (Days 1–3 complete)
+- [x] OpenRefine configured and reconciled sample data
+- [x] ANTELOPE terminology service integrated with Wikibase
 - [ ] Kompakkt deployed
 - [ ] End-to-end integration tested
-- [ ] Demo video recorded
 - [ ] Demo video recorded
 
 ## 🤝 Contributing
