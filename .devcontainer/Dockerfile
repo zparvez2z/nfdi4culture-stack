@@ -26,7 +26,4 @@ RUN apt-get update \
     && git lfs install \
     && rm -rf /var/lib/apt/lists/*
 
-# Ensure docker-compose v2 is available via legacy command if needed
-RUN ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
-
 ENV MAVEN_OPTS="-Xms512m -Xmx2048m"
