@@ -13,17 +13,20 @@ Deploy MediaWiki with Wikibase extension using local repositories and Wikimedia 
 ### Services
 
 1. **mediawiki** (PHP-FPM 8.3)
+
    - Image: `docker-registry.wikimedia.org/dev/bookworm-php83-fpm:1.0.0`
    - Purpose: PHP processing for MediaWiki application
    - Mounts local MediaWiki and Wikibase repositories
 
 2. **mediawiki-web** (Apache 2.4)
+
    - Image: `docker-registry.wikimedia.org/dev/bookworm-apache2:1.0.1`
    - Purpose: Web server with PHP-FPM proxy
    - Port: 8181
    - Mounts same repositories as mediawiki service
 
 3. **mediawiki-jobrunner**
+
    - Image: `docker-registry.wikimedia.org/dev/bookworm-php83-jobrunner:1.0.0`
    - Purpose: Background job processing
    - Handles async tasks and maintenance
@@ -44,6 +47,7 @@ Deploy MediaWiki with Wikibase extension using local repositories and Wikimedia 
 ### 1. Repository Preparation
 
 Local repositories used (checked out under `nfdi4culture-stack/repos`):
+
 - `repos/mediawiki` (MediaWiki 1.46.0-alpha)
 - `repos/mediawiki-extensions-Wikibase`
 
@@ -52,6 +56,7 @@ Local repositories used (checked out under `nfdi4culture-stack/repos`):
 ### 2. Docker Compose Configuration
 
 Created `configs/mediawiki/docker-compose.local.yml` with:
+
 - Volume mounts using **absolute paths** (relative paths failed initially)
 - User mapping: `${MW_DOCKER_UID:-1000}:${MW_DOCKER_GID:-1000}`
 - Environment variables for database connection
@@ -70,7 +75,8 @@ docker compose exec mediawiki composer install --no-dev --working-dir=/var/www/h
 ```
 
 Installed 61 packages for Wikibase including:
-- DataValues libraries (data-values/*)
+
+- DataValues libraries (data-values/\*)
 - Serialization (diff/diff, serialization/serialization)
 - Semantic web tools (wikimedia/purtle for RDF)
 - Graph support (webonyx/graphql-php)
@@ -86,6 +92,7 @@ docker compose exec mediawiki php /var/www/html/w/maintenance/install.php \
 ```
 
 Generated `LocalSettings.php` with:
+
 - Database configuration
 - Admin user: `Admin` / `AdminPassword2024Wiki`
 - Enabled skins: Vector (default)
@@ -115,6 +122,7 @@ docker compose exec mediawiki php /var/www/html/w/maintenance/update.php --quick
 ```
 
 Created Wikibase tables:
+
 - `wb_changes` - Change tracking
 - `wb_id_counters` - Entity ID assignment
 - `wb_items_per_site` - Site links
@@ -136,6 +144,7 @@ This fixed redirects after login/logout to use correct port.
 ## First Wikibase Item
 
 Successfully created **Q1: Vincent van Gogh**
+
 - Label: "Vincent van Gogh"
 - Description: "Dutch post-impressionist painter"
 - URL: http://localhost:8181/wiki/Item:Q1
@@ -182,7 +191,7 @@ Successfully created **Q1: Vincent van Gogh**
 ✅ Wikibase extension loaded (Special:NewItem available)  
 ✅ Database tables created  
 ✅ First item (Q1) created successfully  
-✅ Item display page working with labels and descriptions  
+✅ Item display page working with labels and descriptions
 
 ## Console Warnings
 
@@ -204,10 +213,12 @@ Successfully created **Q1: Vincent van Gogh**
 ## Files Created/Modified
 
 1. `nfdi4culture-stack/configs/mediawiki/docker-compose.local.yml`
+
    - Complete docker-compose configuration
    - 4 services with proper volume mounts
 
 2. `nfdi4culture-stack/.env`
+
    - Secure alphanumeric passwords
    - Database credentials
 
@@ -227,6 +238,7 @@ This setup follows Wikimedia's official development workflow:
 4. **Background job runner** - Async processing for change propagation
 
 This approach demonstrates:
+
 - Docker orchestration skills
 - Understanding of MediaWiki/Wikibase architecture
 - DevOps best practices
@@ -240,8 +252,6 @@ This approach demonstrates:
 4. Deploy OpenRefine for data reconciliation
 5. Configure Wikibase reconciliation service
 
-## Skills Demonstrated
-
 ✅ Docker Compose orchestration  
 ✅ Volume mount debugging  
 ✅ PHP-FPM + Apache configuration understanding  
@@ -251,7 +261,7 @@ This approach demonstrates:
 ✅ Configuration file management  
 ✅ Troubleshooting and debugging  
 ✅ Browser automation with Playwright  
-✅ Semantic web / knowledge graph concepts  
+✅ Semantic web / knowledge graph concepts
 
 ## References
 
