@@ -1,0 +1,79 @@
+services:
+  annotationservice-postgresql:
+    image: postgres:14.5
+    container_name: antelope-postgres
+    environment:
+      - POSTGRES_USER=annotationService
+      - POSTGRES_PASSWORD=
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5432:5432"
+    networks:
+      - antelope-network
+
+  jhipster-registry:
+    image: jhipster/jhipster-registry:v7.3.0
+    container_name: antelope-registry
+    volumes:
+      - ../repos/annotation-service/backend/src/main/docker/central-server-config:/central-config
+    environment:
+      - JHIPSTER_SLEEP=5
+      - _JAVA_OPTIONS=-Xmx512m -Xms256m
+      - SPRING_PROFILES_ACTIVE=dev,api-docs
+      - SPRING_SECURITY_USER_PASSWORD=admin
+      - JHIPSTER_REGISTRY_PASSWORD=admin
+      - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_TYPE=native
+      - SPRING_CLOUD_CONFIG_SERVER_COMPOSITE_0_SEARCH_LOCATIONS=file:./central-config/docker-config/
+    ports:
+      - "8761:8761"
+    networks:
+      - antelope-network
+
+  annotationservice-app:
+    image: eclipse-temurin:11-jdk
+    container_name: antelope-app
+    working_dir: /app
+    volumes:
+      - ../repos/annotation-service:/app
+      - ~/.m2:/root/.m2
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://annotationservice-postgresql:5432/annotationService
+      - SPRING_LIQUIBASE_URL=jdbc:postgresql://annotationservice-postgresql:5432/annotationService
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://admin:admin@jhipster-registry:8761/eureka
+      - SPRING_CLOUD_CONFIG_URI=http://admin:admin@jhipster-registry:8761/config
+      - BASE_URL=/
+      - VECNER_SERVICE_URL=http://vecner:5000
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - antelope-network
+    depends_on:
+      - annotationservice-postgresql
+      - jhipster-registry
+      - vecner
+    command: >
+      bash -c "
+      apt-get update && apt-get install -y curl nodejs npm &&
+      npm install --workspaces &&
+      cd backend && ./mvnw dependency:resolve -Pprod &&
+      cd .. && npm run start:dev
+      "
+  vecner:
+    build:
+      context: ../repos/vecNER
+    container_name: vecner
+    image: annotation-service-vecner
+    environment:
+      - VECNER_MODEL_PATH=/models/vecner.kv
+    ports:
+      - "5000:5000"
+    networks:
+      - antelope-network
+
+networks:
+  antelope-network:
+    driver: bridge
