@@ -1,10 +1,4 @@
-# Day 2: OpenRefine Integration with Wikibase
-
-**Date:** November 18, 2025  
-**Status:** ✅ COMPLETED  
-**Duration:** ~2.5 hours (including build time)
-
----
+# OpenRefine Integration with Wikibase
 
 ## Overview
 

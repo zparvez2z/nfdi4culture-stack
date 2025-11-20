@@ -1,8 +1,4 @@
-# Day 1: MediaWiki + Wikibase Deployment
-
-**Date:** November 15, 2025  
-**Status:** ✅ Completed  
-**Time:** ~3 hours
+# MediaWiki + Wikibase Deployment
 
 ## Objective
 

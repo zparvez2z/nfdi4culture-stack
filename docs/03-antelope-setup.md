@@ -1,11 +1,5 @@
 # Day 3: ANTELOPE Terminology Service + Wikibase Integration
 
-**Date:** November 18, 2025  
-**Status:** ✅ COMPLETED  
-**Duration:** ~3 hours (repo audit, Docker fixes, configuration, validation)
-
----
-
 ## Overview
 
 Brought the ANTELOPE annotation stack (Spring Boot backend + Vue 3 frontend) online from the local repository and wired its terminology search to the MediaWiki/Wikibase instance deployed on Day 1. The work focused on stabilizing the docker-compose developer workflow, ensuring Node.js tooling exists inside the app container, and making all Wikidata-specific service calls configurable so they can point at the local SPARQL endpoint exposed at `http://localhost:8181/query/sparql`.
