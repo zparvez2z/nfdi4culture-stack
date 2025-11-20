@@ -33,5 +33,5 @@ volumes:
 
 networks:
   nfdi4culture-net:
+    external: true
     name: nfdi4culture-net
-    driver: bridge
